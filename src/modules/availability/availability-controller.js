@@ -21,7 +21,7 @@ class AvailabilityController {
   // Delete appointment
   static async remove(req, res) {
     try {
-      const result = await AvailabilityService.delete(req.params.id);
+      const result = await AvailabilityService.deleteForPsychologist(req.user.user_id, req.params.id);
       res.status(200).json({ success: true, result });
     } catch (err) {
       logger.error(`AvailabilityController.remove: ${err.message}`);
