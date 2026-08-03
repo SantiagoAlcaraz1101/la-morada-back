@@ -1,15 +1,12 @@
 const express = require("express");
-const router = express.Router();
-const PaymentController = require("./payment-controller");
 const { validToken } = require("../../middlewares/jwt-middleware");
+const PaymentController = require("./payment-controller");
 
-// Create payment method (POST /payment/)
+const router = express.Router();
+
 router.post("/", validToken, PaymentController.create);
-
-// Get user payment methods (GET /payment/)
 router.get("/", validToken, PaymentController.getUserPayments);
-
-// Delete payment method (DELETE /payment/:paymentId)
+router.post("/checkout", validToken, PaymentController.checkout);
 router.delete("/:paymentId", validToken, PaymentController.delete);
 
 module.exports = router;

@@ -3,13 +3,17 @@ const Cart = require("../cart/models/cart");
 const { validateUser } = require("./validators/user-validator");
 const { hashPassword } = require("../auth/strategies/password-strategy");
 const logger = require("../../utils/logger");
+const crypto = require("crypto");
 const redisClient = require("../../config/redis-config");
 const TwilioService = require("../twilio/twilio-service");
 
 // Helper to generate 6-character reset code
 function generateCode(length = 6) {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  return Array.from(
+    crypto.randomBytes(length),
+    (value) => alphabet[value % alphabet.length]
+  ).join("");
 }
 
 class UserService {
@@ -28,7 +32,7 @@ class UserService {
     const user = new User({ ...data, role: "patient" });
     await user.save();
 
-    const cart = new Cart({ total: 0, products_id: [] });
+    const cart = new Cart({ user_id: user._id, total: 0, products_id: [] });
     await cart.save();
 
     user.cart_id = cart._id;
@@ -48,7 +52,7 @@ class UserService {
     if (invalidFields.length) throw new Error("FIELDS NOT UPDATABLE");
 
     const dataToValidate = { ...user.toObject(), ...updates, password: updates.password, rePassword: updates.password };
-    validateUser(dataToValidate);
+    validateUser(dataToValidate, { validatePassword: updates.password !== undefined });
 
     for (const field of allowedFields) {
       if (updates[field] !== undefined) {
@@ -75,7 +79,8 @@ class UserService {
   static async getPsychologistsBySpecialty(specialty) {
     if (!specialty || typeof specialty !== "string") throw new Error("INVALID PARAMS");
 
-    const regex = new RegExp(specialty, "i");
+    const escaped = specialty.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(escaped, "i");
     return await User.find({ role: "psychologist", specialty: regex }).select("-password").lean();
   }
 
@@ -115,6 +120,7 @@ class UserService {
     if (!storedCode) throw new Error("CODE EXPIRED OR NOT FOUND");
     if (storedCode !== code) throw new Error("INVALID CODE");
 
+    validateUser({ ...user.toObject(), password: newPassword });
     user.password = await hashPassword(newPassword);
     await user.save();
 

@@ -1,13 +1,18 @@
 const sgMail = require("@sendgrid/mail");
 const logger = require("../../utils/logger");
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 class TwilioService {
 
   // Send generic email
   static async sendEmail({ to, subject, html }) {
     try {
+      if (process.env.MAIL_MODE === "console" || !process.env.SENDGRID_API_KEY) {
+        logger.info(`[mail:console] to=${to} subject=${subject}`);
+        return { mocked: true };
+      }
+
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
       const msg = {
         to,
         from: process.env.SENDER_EMAIL,
@@ -17,6 +22,7 @@ class TwilioService {
 
       await sgMail.send(msg);
       logger.info(`SendGrid: Email sent to ${to} with subject "${subject}"`);
+      return { mocked: false };
     } catch (err) {
       logger.error(`SendGrid: Failed to send email to ${to} - ${err.message}`);
       throw err;

@@ -1,28 +1,24 @@
 const { createClient } = require("redis");
 const logger = require("../utils/logger");
 
-const REDIS_URL = process.env.REDIS_URL;
-
-// Redis Client
 const redisClient = createClient({
-  url: REDIS_URL
+  url: process.env.REDIS_URL || "redis://127.0.0.1:6379",
 });
 
-// Connection error to Redis
-redisClient.on('error', err => logger.error("Redis Client Error", err));
-redisClient.on("connect", () => logger.info("Connected to Redis Cloud"));
-
-// Connection successful
+redisClient.on("error", (err) => logger.error(`Redis Client Error: ${err.message}`));
+redisClient.on("connect", () => logger.info("Connected to Redis"));
 redisClient.on("ready", () => logger.info("Redis client ready"));
 
-// Redis connection
-(async () => {
-  try {
-    await redisClient.connect();
-  } catch (err) {
-    logger.error("Redis connection failed:", err);
-    process.exit(1);
-  }
-})();
+async function connectIfNeeded() {
+  if (!redisClient.isOpen) await redisClient.connect();
+  return redisClient;
+}
+
+async function disconnectIfNeeded() {
+  if (redisClient.isOpen) await redisClient.quit();
+}
+
+redisClient.connectIfNeeded = connectIfNeeded;
+redisClient.disconnectIfNeeded = disconnectIfNeeded;
 
 module.exports = redisClient;

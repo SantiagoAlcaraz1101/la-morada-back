@@ -3,78 +3,63 @@ const Product = require("../product/models/product");
 const logger = require("../../utils/logger");
 
 class CartService {
-
-  // Calculate total
   static async calculateTotal(cart) {
-    let total = 0;
-    for (const item of cart.products_id) {
-      const product = await Product.findById(item.product_id);
-      if (product) total += product.price * item.quantity;
-    }
-    cart.total = total;
+    const productIds = cart.products_id.map((item) => item.product_id);
+    const products = await Product.find({ _id: { $in: productIds } }).lean();
+    const prices = new Map(products.map((product) => [String(product._id), Number(product.price)]));
+
+    cart.total = cart.products_id.reduce(
+      (sum, item) => sum + (prices.get(String(item.product_id)) || 0) * item.quantity,
+      0
+    );
   }
 
-  // add product
-  static async addProduct(user_id, product_id, quantity = 1) {
-    try {
-      const product = await Product.findById(product_id);
-      if (!product) throw new Error("PRODUCT NOT FOUND");
-
-      let cart = await Cart.findOne({ user_id });
-
-      if (!cart) {
-        cart = new Cart({
-          user_id,
-          products_id: [{ product_id, quantity }],
-          total: product.price * quantity,
-        });
-      } else {
-        const index = cart.products_id.findIndex(p => p.product_id.toString() === product_id);
-        if (index > -1) {
-          cart.products_id[index].quantity += quantity;
-        } else {
-          cart.products_id.push({ product_id, quantity });
-        }
-        await this.calculateTotal(cart);
-      }
-
-      await cart.save();
-      logger.info(`Cart updated for user ${user_id}`);
-      return cart;
-    } catch (err) {
-      logger.error(`CartService.addProduct: ${err.message}`);
-      throw err;
-    }
-  }
-
-  // Obtener carrito
-  static async getCart(user_id) {
-    const cart = await Cart.findOne({ user_id }).populate("products_id.product_id");
-    if (cart) await this.calculateTotal(cart);
-    return cart || { user_id, products_id: [], total: 0 };
-  }
-
-  // Delete product from cart
-  static async removeProduct(user_id, product_id) {
-    const cart = await Cart.findOne({ user_id });
-    if (!cart) throw new Error("CART NOT FOUND");
-
-    cart.products_id = cart.products_id.filter(p => p.product_id.toString() !== product_id);
-    await this.calculateTotal(cart);
-    await cart.save();
-    logger.info(`Product removed from cart for user ${user_id}`);
+  static async getOrCreateCart(user_id) {
+    let cart = await Cart.findOne({ user_id });
+    if (!cart) cart = await Cart.create({ user_id, products_id: [], total: 0 });
     return cart;
   }
 
-  // De;ete all items
-  static async clearCart(user_id) {
-    const cart = await Cart.findOne({ user_id });
-    if (!cart) throw new Error("CART NOT FOUND");
+  static async addProduct(user_id, product_id, quantity = 1) {
+    const product = await Product.findById(product_id);
+    if (!product) throw new Error("PRODUCT NOT FOUND");
 
+    const cart = await this.getOrCreateCart(user_id);
+    const index = cart.products_id.findIndex(
+      (item) => String(item.product_id) === String(product_id)
+    );
+
+    if (index >= 0) cart.products_id[index].quantity += Number(quantity);
+    else cart.products_id.push({ product_id, quantity: Number(quantity) });
+
+    await this.calculateTotal(cart);
+    await cart.save();
+    logger.info(`Cart updated for user ${user_id}`);
+    return cart.populate("products_id.product_id");
+  }
+
+  static async getCart(user_id) {
+    const cart = await this.getOrCreateCart(user_id);
+    await this.calculateTotal(cart);
+    await cart.save();
+    return cart.populate("products_id.product_id");
+  }
+
+  static async removeProduct(user_id, product_id) {
+    const cart = await this.getOrCreateCart(user_id);
+    cart.products_id = cart.products_id.filter(
+      (item) => String(item.product_id) !== String(product_id)
+    );
+    await this.calculateTotal(cart);
+    await cart.save();
+    return cart.populate("products_id.product_id");
+  }
+
+  static async clearCart(user_id) {
+    const cart = await this.getOrCreateCart(user_id);
     cart.products_id = [];
     cart.total = 0;
     await cart.save();
-    logger.info(`Cart cleared for user ${user_id}`);
     return cart;
   }
 }

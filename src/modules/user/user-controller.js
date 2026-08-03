@@ -22,7 +22,8 @@ class UserController {
       const { password, rePassword, ...rest } = req.body;
       if (password && password !== rePassword) throw new Error("PASSWORD_MISMATCH");
 
-      const updatedUser = await UserService.update(req.params.id, { ...rest, password });
+      if (String(req.params.id) !== String(req.user.user_id)) throw new Error("ACCESS DENIED");
+      const updatedUser = await UserService.update(req.user.user_id, { ...rest, password });
       res.status(200).json({ success: true, message: "User updated successfully", user: updatedUser });
     } catch (err) {
       handleError(res, err);
