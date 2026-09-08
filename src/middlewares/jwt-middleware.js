@@ -2,7 +2,7 @@ const { verifyToken, generateToken } = require("../modules/auth/strategies/jwt-s
 const redisClient = require("../config/redis-config");
 const logger = require("../utils/logger");
 
-const JWT_ONE_DAY_EXPIRES = parseInt(process.env.JWT_ONE_DAY_EXPIRES);
+const JWT_ONE_DAY_EXPIRES = Number.parseInt(process.env.JWT_ONE_DAY_EXPIRES);
 
 // Middleware to authorize a valid jwt
 async function validToken(req, res, next) {
