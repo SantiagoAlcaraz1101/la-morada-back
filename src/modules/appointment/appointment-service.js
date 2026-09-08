@@ -5,7 +5,7 @@ const TwilioService = require("../twilio/twilio-service");
 const logger = require("../../utils/logger");
 
 const TIME_ZONE = process.env.APP_TIMEZONE || "America/Bogota";
-const ALLOWED_STATUSES = ["pendiente", "confirmada", "completada", "cancelada"];
+const ALLOWED_STATUSES = new Set(["pendiente", "confirmada", "completada", "cancelada"]);
 
 function normalizeDay(day) {
   return String(day)
@@ -48,8 +48,8 @@ class AppointmentService {
   static async createAppointment(data) {
     const patient = await User.findById(String(data.patient_id));
     const psychologist = await User.findById(String(data.psychologist_id));
-    if (!patient || patient.role !== "patient") throw new Error("INVALID PATIENT");
-    if (!psychologist || psychologist.role !== "psychologist") {
+    if (patient?.role !== "patient") throw new Error("INVALID PATIENT");
+    if (psychologist?.role !== "psychologist") {
       throw new Error("INVALID PSYCHOLOGIST");
     }
 
@@ -99,7 +99,7 @@ class AppointmentService {
     const appointment = await Appointment.findById(String(appointmentId));
     if (!appointment) throw new Error("APPOINTMENT NOT FOUND");
     if (!ownsAppointment(appointment, user)) throw new Error("ACCESS DENIED");
-    if (!ALLOWED_STATUSES.includes(newStatus)) throw new Error("INVALID STATUS");
+    if (!ALLOWED_STATUSES.has(newStatus)) throw new Error("INVALID STATUS");
 
     if (user.role === "patient" && newStatus !== "cancelada") throw new Error("ACCESS DENIED");
     if (appointment.status === "completada") throw new Error("CANNOT CHANGE COMPLETED APPOINTMENT");
