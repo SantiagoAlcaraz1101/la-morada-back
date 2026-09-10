@@ -47,8 +47,8 @@ class UserService {
     const user = await User.findById(userId);
     if (!user) throw new Error("USER NOT FOUND");
 
-    const allowedFields = ["name", "last_name1", "last_name2", "email", "phone", "age", "password"];
-    const invalidFields = Object.keys(updates).filter(f => !allowedFields.includes(f));
+    const allowedFields = new Set(["name", "last_name1", "last_name2", "email", "phone", "age", "password"]);
+    const invalidFields = Object.keys(updates).filter(f => !allowedFields.has(f));
     if (invalidFields.length) throw new Error("FIELDS NOT UPDATABLE");
 
     const dataToValidate = { ...user.toObject(), ...updates, password: updates.password, rePassword: updates.password };

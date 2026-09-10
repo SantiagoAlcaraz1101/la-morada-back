@@ -7,7 +7,7 @@ class PostService {
   // Create post
   static async createPost(psychologist_id, title, content, active = true) {
     const user = await User.findById(psychologist_id);
-    if (!user || user.role !== "psychologist") throw new Error("USER NOT FOUND OR NOT PSYCHOLOGIST");
+    if (user?.role !== "psychologist") throw new Error("USER NOT FOUND OR NOT PSYCHOLOGIST");
 
     const post = new Post({ psychologist_id, title, content, active });
     await post.save();
