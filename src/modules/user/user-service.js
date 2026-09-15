@@ -3,7 +3,7 @@ const Cart = require("../cart/models/cart");
 const { validateUser } = require("./validators/user-validator");
 const { hashPassword } = require("../auth/strategies/password-strategy");
 const logger = require("../../utils/logger");
-const crypto = require("crypto");
+const crypto = require("node:crypto");
 const redisClient = require("../../config/redis-config");
 const TwilioService = require("../twilio/twilio-service");
 
@@ -79,7 +79,7 @@ class UserService {
   static async getPsychologistsBySpecialty(specialty) {
     if (!specialty || typeof specialty !== "string") throw new Error("INVALID PARAMS");
 
-    const escaped = specialty.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const escaped = specialty.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
     const regex = new RegExp(escaped, "i");
     return await User.find({ role: "psychologist", specialty: regex }).select("-password").lean();
   }
@@ -99,7 +99,7 @@ class UserService {
     if (!user) throw new Error("USER NOT FOUND");
 
     const code = generateCode(6);
-    const ttl = parseInt(process.env.RESET_CODE_TTL, 10) || 900; // 15 minutes default
+    const ttl = Number.parseInt(process.env.RESET_CODE_TTL, 10) || 900; // 15 minutes default
 
     // Store code in Redis
     await redisClient.setEx(`reset:${email}`, ttl, code);
