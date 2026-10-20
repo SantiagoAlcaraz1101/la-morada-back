@@ -18,7 +18,8 @@ class AuthService {
 
     AuthValidator.validateRole(user.role, ["patient", "psychologist"]);
 
-    const { password: _, ...userWithoutPassword } = user.toObject();
+    const userWithoutPassword = user.toObject();
+    delete userWithoutPassword.password;
     const token = await JwtStrategy.generateToken(user._id, user.role);
 
     logger.info(`Login successful for user ${user._id}`);

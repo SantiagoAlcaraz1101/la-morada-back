@@ -15,7 +15,7 @@ class AuthValidator {
     }
 
     const passwordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[@$!%*?&])[A-Za-z0-9@$!%*?&]{8,}$/;
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z0-9@$!%*?&]{8,}$/;
     if (!passwordRegex.test(password)) {
       logger.error("Password does not meet security requirements");
       throw new Error("INVALID PASSWORD");

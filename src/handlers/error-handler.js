@@ -1,104 +1,92 @@
-const STATUS = require("../handlers/status-handler");
+const STATUS = require("./status-handler");
 const logger = require("../utils/logger");
 
+const ERROR_MAP = {
+  "MISSING CREDENTIALS": ["Credenciales faltantes", STATUS.BAD_REQUEST],
+  "INVALID EMAIL": ["Correo electrónico inválido", STATUS.BAD_REQUEST],
+  "INVALID PASSWORD": ["La contraseña no cumple la política definida", STATUS.BAD_REQUEST],
+  "WRONG PASSWORD": ["Contraseña incorrecta", STATUS.UNAUTHORIZED],
+  "UNAUTHORIZED": ["No autorizado", STATUS.FORBIDDEN],
+  "ACCESS DENIED": ["Acceso denegado", STATUS.FORBIDDEN],
+  "INVALID TOKEN": ["Token inválido o expirado", STATUS.UNAUTHORIZED],
+  "TOKEN REQUIRED": ["Se requiere un token", STATUS.UNAUTHORIZED],
+  "CORS ORIGIN NOT ALLOWED": ["Origen no permitido", STATUS.FORBIDDEN],
+
+  "PATIENTID REQUIRED": ["Se requiere el ID del paciente", STATUS.BAD_REQUEST],
+  "PSYCHOLOGISTID REQUIRED": ["Se requiere el ID del psicólogo", STATUS.BAD_REQUEST],
+  "INVALID PATIENT": ["Paciente inválido", STATUS.BAD_REQUEST],
+  "INVALID PSYCHOLOGIST": ["Psicólogo inválido", STATUS.BAD_REQUEST],
+  "INVALID START DATE": ["Fecha de inicio inválida", STATUS.BAD_REQUEST],
+  "INVALID STATUS": ["Estado inválido", STATUS.BAD_REQUEST],
+  "APPOINTMENT NOT FOUND": ["Cita no encontrada", STATUS.NOT_FOUND],
+  "TIME ALREADY BOOKED": ["Ya existe una cita en este horario", STATUS.CONFLICT],
+  "TIME NOT AVAILABLE IN SLOT": ["La hora no pertenece a un horario disponible", STATUS.BAD_REQUEST],
+  "PSYCHOLOGIST HAS NO AVAILABILITY": ["El psicólogo no ha publicado disponibilidad", STATUS.BAD_REQUEST],
+  "DATE MUST BE IN THE FUTURE": ["La fecha debe ser futura", STATUS.BAD_REQUEST],
+  "DAY NOT AVAILABLE": ["El psicólogo no atiende ese día", STATUS.BAD_REQUEST],
+  "CANNOT CHANGE COMPLETED APPOINTMENT": ["No se puede cambiar una cita completada", STATUS.CONFLICT],
+  "CANNOT CHANGE CANCELLED APPOINTMENT": ["No se puede cambiar una cita cancelada", STATUS.CONFLICT],
+
+  "PSYCHOLOGIST_ID REQUIRED": ["Se requiere el ID del psicólogo", STATUS.BAD_REQUEST],
+  "DAYS REQUIRED": ["Se deben especificar días de disponibilidad", STATUS.BAD_REQUEST],
+  "SLOTS REQUIRED": ["Se debe especificar al menos un horario", STATUS.BAD_REQUEST],
+  "DUPLICATE DAY": ["No se permiten días duplicados", STATUS.BAD_REQUEST],
+  "INVALID DAY": ["Día inválido", STATUS.BAD_REQUEST],
+  "INVALID SLOT TIME": ["Horario inválido", STATUS.BAD_REQUEST],
+  "AVAILABILITY NOT FOUND": ["Disponibilidad no encontrada", STATUS.NOT_FOUND],
+
+  "ID EXISTS": ["Identificación ya registrada", STATUS.CONFLICT],
+  "EMAIL EXISTS": ["Correo electrónico ya registrado", STATUS.CONFLICT],
+  "USER NOT FOUND": ["Usuario no encontrado", STATUS.NOT_FOUND],
+  "USER NOT FOUND OR NOT PSYCHOLOGIST": ["Usuario no encontrado o sin rol de psicólogo", STATUS.FORBIDDEN],
+  "INVALID ROLE": ["El usuario no tiene el rol requerido", STATUS.FORBIDDEN],
+  "INVALID PARAMS": ["Parámetros inválidos", STATUS.BAD_REQUEST],
+  "INVALID ID": ["Identificación inválida", STATUS.BAD_REQUEST],
+  "INVALID DOC TYPE": ["Tipo de documento inválido", STATUS.BAD_REQUEST],
+  "INVALID NAME": ["Nombre inválido", STATUS.BAD_REQUEST],
+  "INVALID LASTNAME1": ["Primer apellido inválido", STATUS.BAD_REQUEST],
+  "INVALID LASTNAME2": ["Segundo apellido inválido", STATUS.BAD_REQUEST],
+  "INVALID AGE": ["Edad inválida", STATUS.BAD_REQUEST],
+  "INVALID PHONE": ["Teléfono inválido", STATUS.BAD_REQUEST],
+  "FIELDS NOT UPDATABLE": ["Algunos campos no se pueden actualizar", STATUS.BAD_REQUEST],
+  "PASSWORD_MISMATCH": ["Las contraseñas no coinciden", STATUS.BAD_REQUEST],
+  "CODE EXPIRED OR NOT FOUND": ["Código vencido o inexistente", STATUS.BAD_REQUEST],
+  "INVALID CODE": ["Código inválido", STATUS.BAD_REQUEST],
+
+  "INVALID CARD NUMBER": ["Número de tarjeta inválido", STATUS.BAD_REQUEST],
+  "INVALID CARD NAME": ["Nombre de tarjeta inválido", STATUS.BAD_REQUEST],
+  "INVALID EXPIRATION DATE": ["Fecha de expiración inválida", STATUS.BAD_REQUEST],
+  "INVALID CVV": ["CVV inválido", STATUS.BAD_REQUEST],
+  "PAYMENT NOT FOUND": ["Método de pago no encontrado", STATUS.NOT_FOUND],
+
+  "PRODUCT NOT FOUND": ["Producto no encontrado", STATUS.NOT_FOUND],
+  "PRODUCT EXISTS": ["El producto ya existe", STATUS.CONFLICT],
+  "INVALID PRODUCT_ID": ["ID de producto inválido", STATUS.BAD_REQUEST],
+  "INVALID QUANTITY": ["Cantidad inválida", STATUS.BAD_REQUEST],
+  "CART NOT FOUND": ["Carrito no encontrado", STATUS.NOT_FOUND],
+  "CART EMPTY": ["El carrito está vacío", STATUS.BAD_REQUEST],
+
+  "POST NOT FOUND": ["Publicación no encontrada", STATUS.NOT_FOUND],
+  "INVALID TITLE": ["Título inválido", STATUS.BAD_REQUEST],
+  "INVALID AUTHOR": ["Autor inválido", STATUS.BAD_REQUEST],
+  "INVALID PUBLISH_YEAR": ["Año de publicación inválido", STATUS.BAD_REQUEST],
+  "INVALID PRICE": ["Precio inválido", STATUS.BAD_REQUEST],
+  "INVALID COVER_URL": ["URL de portada inválida", STATUS.BAD_REQUEST],
+  "INVALID CONTENT": ["Contenido inválido", STATUS.BAD_REQUEST],
+  "INVALID ACTIVE": ["Estado activo inválido", STATUS.BAD_REQUEST],
+  "INVALID YOUTUBE ID": ["ID de YouTube inválido", STATUS.BAD_REQUEST],
+  "INVALID DESCRIPTION": ["Descripción inválida", STATUS.BAD_REQUEST],
+};
+
 function handleError(res, err) {
-  const ERROR_MAP = {
-    // Auth errors
-    "MISSING CREDENTIALS": { msg: "Credenciales faltantes", status: STATUS.BAD_REQUEST },
-    "INVALID EMAIL": { msg: "Correo electrónico inválido", status: STATUS.BAD_REQUEST },
-    "INVALID PASSWORD": { msg: "Contraseña inválida", status: STATUS.BAD_REQUEST },
-    "WRONG PASSWORD": { msg: "Contraseña incorrecta", status: STATUS.UNAUTHORIZED },
-    "UNAUTHORIZED": { msg: "No autorizado", status: STATUS.FORBIDDEN },
-    "INVALID TOKEN": { msg: "Token inválido o expirado", status: STATUS.UNAUTHORIZED },
-    "TOKEN REQUIRED": { msg: "Se requiere un token", status: STATUS.UNAUTHORIZED },
-
-    // Appointment errors
-    "PATIENTID REQUIRED": { msg: "Se requiere el ID del paciente", status: STATUS.BAD_REQUEST },
-    "PSYCHOLOGISTID REQUIRED": { msg: "Se requiere el ID del psicólogo", status: STATUS.BAD_REQUEST },
-    "INVALID STATUS": { msg: "Estado inválido", status: STATUS.BAD_REQUEST },
-    "APPOINTMENT NOT FOUND": { msg: "Cita no encontrada", status: STATUS.NOT_FOUND },
-    "TIME ALREADY BOOKED": { msg: "Ya existe una cita en este horario", status: STATUS.BAD_REQUEST },
-    "PSYCHOLOGIST NOT AVAILABLE AT THIS TIME": { msg: "El psicólogo no está disponible en este horario", status: STATUS.BAD_REQUEST },
-    "DATE MUST BE IN THE FUTURE": { msg: "La fecha debe ser futura", status: STATUS.BAD_REQUEST },
-    "DAY NOT AVAILABLE": { msg: "El psicólogo no atiende ese día", status: STATUS.BAD_REQUEST },
-
-    // Availability errors
-    "PSYCHOLOGIST_ID REQUIRED": { msg: "Se requiere el ID del psicólogo", status: STATUS.BAD_REQUEST },
-    "DAYS REQUIRED": { msg: "Se deben especificar los días de disponibilidad", status: STATUS.BAD_REQUEST },
-    "SLOTS MUST MATCH DAYS LENGTH": { msg: "Los horarios deben coincidir en cantidad con los días", status: STATUS.BAD_REQUEST },
-    "INVALID DAY": { msg: "Día inválido", status: STATUS.BAD_REQUEST },
-    "INVALID SLOT TIME": { msg: "Horario inválido", status: STATUS.BAD_REQUEST },
-    "AVAILABILITY NOT FOUND": { msg: "Disponibilidad no encontrada", status: STATUS.NOT_FOUND },
-
-    // Conflict / registration
-    "ID EXISTS": { msg: "ID ya en uso", status: STATUS.CONFLICT },
-    "EMAIL EXISTS": { msg: "Correo electrónico ya en uso", status: STATUS.CONFLICT },
-    "RESOURCE EXISTS": { msg: "Recurso ya existe", status: STATUS.CONFLICT },
-
-    // Permissions
-    "ACCESS DENIED": { msg: "Acceso denegado", status: STATUS.FORBIDDEN },
-    "USER NOT FOUND OR NOT PSYCHOLOGIST": { msg: "Usuario no encontrado o no es psicólogo", status: STATUS.FORBIDDEN },
-    "INVALID ROLE": { msg: "El usuario no tiene el rol requerido", status: STATUS.FORBIDDEN },
-
-    // Validation errors
-    "INVALID PARAMS": { msg: "Parámetros inválidos", status: STATUS.BAD_REQUEST },
-    "INVALID ID": { msg: "ID inválido", status: STATUS.BAD_REQUEST },
-    "INVALID DOC TYPE": { msg: "Tipo de documento inválido", status: STATUS.BAD_REQUEST },
-    "INVALID NAME": { msg: "Nombre inválido", status: STATUS.BAD_REQUEST },
-    "INVALID LASTNAME1": { msg: "Primer apellido inválido", status: STATUS.BAD_REQUEST },
-    "INVALID LASTNAME2": { msg: "Segundo apellido inválido", status: STATUS.BAD_REQUEST },
-    "INVALID AGE": { msg: "Edad inválida", status: STATUS.BAD_REQUEST },
-    "INVALID PHONE": { msg: "Teléfono inválido", status: STATUS.BAD_REQUEST },
-    "FIELDS NOT UPDATABLE": { msg: "Algunos campos no se pueden actualizar", status: STATUS.BAD_REQUEST },
-    "PASSWORD_MISMATCH": { msg: "Las contraseñas no coinciden", status: STATUS.BAD_REQUEST },
-
-    // Payment errors
-    "INVALID CARD NUMBER": { msg: "Número de tarjeta inválido", status: STATUS.BAD_REQUEST },
-    "INVALID CARD NAME": { msg: "Nombre de tarjeta inválido", status: STATUS.BAD_REQUEST },
-    "INVALID EXPIRATION DATE": { msg: "Fecha de expiración inválida", status: STATUS.BAD_REQUEST },
-    "INVALID CVV": { msg: "CVV inválido", status: STATUS.BAD_REQUEST },
-
-    // Not found
-    "USER NOT FOUND": { msg: "Usuario no encontrado", status: STATUS.NOT_FOUND },
-    "POST NOT FOUND": { msg: "Post no encontrado", status: STATUS.NOT_FOUND },
-    "PRODUCT NOT FOUND": { msg: "Producto no encontrado", status: STATUS.NOT_FOUND },
-    "CART NOT FOUND": { msg: "Carrito no encontrado", status: STATUS.NOT_FOUND },
-
-    // Product errors
-    "INVALID TITLE": { msg: "Título inválido", status: STATUS.BAD_REQUEST },
-    "INVALID AUTHOR": { msg: "Autor inválido", status: STATUS.BAD_REQUEST },
-    "INVALID PUBLISH_YEAR": { msg: "Año de publicación inválido", status: STATUS.BAD_REQUEST },
-    "INVALID PRICE": { msg: "Precio inválido", status: STATUS.BAD_REQUEST },
-    "INVALID COVER_URL": { msg: "URL de portada inválida", status: STATUS.BAD_REQUEST },
-    "PRODUCT EXISTS": { msg: "El producto ya existe", status: STATUS.CONFLICT },
-
-    // Cart errors
-    "INVALID PRODUCT_ID": { msg: "ID de producto inválido", status: STATUS.BAD_REQUEST },
-    "INVALID QUANTITY": { msg: "Cantidad inválida", status: STATUS.BAD_REQUEST },
-
-    // Podcast errors
-    "INVALID YOUTUBE ID": { msg: "ID de YouTube inválido", status: STATUS.BAD_REQUEST },
-    "INVALID DESCRIPTION": { msg: "Descripción inválida", status: STATUS.BAD_REQUEST },
-
-    // Post errors
-    "INVALID CONTENT": { msg: "Contenido inválido", status: STATUS.BAD_REQUEST },
-    "INVALID ACTIVE": { msg: "Estado activo inválido", status: STATUS.BAD_REQUEST },
-
-    // Twilio / SendGrid errors
-    "FAILED TO SEND APPOINTMENT CONFIRMATION": { msg: "No se pudo enviar el correo de confirmación de la cita", status: STATUS.INTERNAL_SERVER_ERROR },
-    "SENDGRID API KEY MISSING": { msg: "Falta la clave API de SendGrid", status: STATUS.INTERNAL_SERVER_ERROR },
-    "EMAIL SEND FAILED": { msg: "Error al enviar el correo electrónico", status: STATUS.INTERNAL_SERVER_ERROR },
-  };
-
   const key = err.message?.toUpperCase?.() || "DEFAULT";
-  const { msg, status } = ERROR_MAP[key] || {
-    msg: "Error interno del servidor",
-    status: STATUS.INTERNAL_SERVER_ERROR,
-  };
+  const [message, status] = ERROR_MAP[key] || [
+    "Error interno del servidor",
+    STATUS.INTERNAL_SERVER_ERROR,
+  ];
 
   logger.error(`Error handled: ${err.message}`, { stack: err.stack });
-
-  return res.status(status).json({ success: false, message: msg });
+  return res.status(status).json({ success: false, message });
 }
 
 module.exports = { handleError };
