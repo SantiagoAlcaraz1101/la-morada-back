@@ -35,3 +35,7 @@ Los datos son completamente sintéticos. El envío de correo queda en modo conso
 ## Variables principales
 
 Consulta `.env.example`. Para el frontend local, `CORS_ORIGINS` debe incluir `http://localhost:4200`.
+# Entrega compartida de validación y verificación
+
+La documentación, rúbricas y herramientas comunes están en el [repositorio central privado](https://github.com/SantiagoAlcaraz1101/la-morada-validacion). Su README permite descargar esta API y el frontend en versiones compatibles, instalar dependencias y ejecutar las pruebas por responsable. Las evidencias anteriores de `docs/` se conservan como histórico.
+
