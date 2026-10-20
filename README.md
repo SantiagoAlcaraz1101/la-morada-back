@@ -38,4 +38,3 @@ Consulta `.env.example`. Para el frontend local, `CORS_ORIGINS` debe incluir `ht
 # Entrega compartida de validación y verificación
 
 La documentación, rúbricas y herramientas comunes están en el [repositorio central privado](https://github.com/SantiagoAlcaraz1101/la-morada-validacion). Su README permite descargar esta API y el frontend en versiones compatibles, instalar dependencias y ejecutar las pruebas por responsable. Las evidencias anteriores de `docs/` se conservan como histórico.
-
